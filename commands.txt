@@ -1,0 +1,11 @@
+CASSANDRA
+
+1. cqlsh -u cassandra -p cassandra
+2. desc keyspaces;
+3. use ks_wordcount;
+4. select * from word_count;
+
+KAFKA_PRODUSER
+
+1. opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list #Список топиков
+2. opt/bitnami/kafka/bin/kafka-console-producer.sh --bootstrap-server kafka:9092 --topic my_word_count #Создание продюсера

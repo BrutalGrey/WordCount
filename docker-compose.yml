@@ -1,0 +1,83 @@
+version: '2'
+
+networks:
+  spark-kafka:
+    driver: bridge
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper
+    container_name: zookeeper-server
+    networks:
+      - spark-kafka
+    ports:
+      - "2181:2181"
+    volumes:
+      - "zookeeper_data:/bitnami"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+  kafka:
+    image: bitnami/kafka
+    container_name: kafka-server
+    networks:
+      - spark-kafka
+    ports:
+      - "9092:9092"
+    volumes:
+      - "kafka_data:/bitnami"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-server:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+
+  cassandra:
+    image: bitnami/cassandra
+    container_name: cassandra-server
+    networks:
+      - spark-kafka
+    ports:
+      - '7000:7000'
+      - '9042:9042'
+    environment:
+      - CASSANDRA_SEEDS=cassandra-server
+      - CASSANDRA_PASSWORD_SEEDER=yes
+      - CASSANDRA_PASSWORD=cassandra
+    volumes:
+      - "cassandra_data:/bitnami"
+    depends_on:
+      - spark
+    
+
+  spark:
+    build: .
+    container_name: spark-master
+    networks:
+      - spark-kafka
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    user: root
+    ports:
+      - '8080:8080'
+    volumes: 
+      - ./jars_dir:/opt/bitnami/spark/ivy:z
+    depends_on: 
+      - kafka
+    command: 
+        spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.1,com.datastax.spark:spark-cassandra-connector_2.12:3.2.0 /Main.py
+
+
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local
+  cassandra_data:
+    driver: local
